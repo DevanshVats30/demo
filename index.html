@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Vehicle Rental System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        select,
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e6ed;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .vehicle-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .vehicle-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .vehicle-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .vehicle-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .vehicle-card h3 {
+            margin: 0 0 10px 0;
+            color: #3498db;
+            font-size: 18px;
+        }
+
+        .vehicle-card p {
+            margin: 6px 0;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .vehicle-card .price {
+            font-weight: bold;
+            color: #27ae60;
+            font-size: 16px;
+        }
+
+        .vehicle-card .available {
+            font-weight: bold;
+            color: #e74c3c;
+            font-size: 14px;
+        }
+
+        .vehicle-card button {
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #booking-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .modal-content p {
+            margin: 10px 0;
+        }
+
+        .modal-content button {
+            margin-top: 15px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        #booking-details {
+            margin: 15px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Vehicle Rental System</h1>
+        <div class="filter-section">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="vehicle-type">Vehicle Type</label>
+                    <select id="vehicle-type">
+                        <option value="">All Types</option>
+                        <option value="Car">Car</option>
+                        <option value="Bike">Bike</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="transmission">Transmission</label>
+                    <select id="transmission">
+                        <option value="">All</option>
+                        <option value="Manual">Manual</option>
+                        <option value="Automatic">Automatic</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="fuel-type">Fuel Type</label>
+                    <select id="fuel-type">
+                        <option value="">All</option>
+                        <option value="Petrol">Petrol</option>
+                        <option value="Diesel">Diesel</option>
+                        <option value="Electric">Electric</option>
+                    </select>
+                </div>
+            </div>
+            <button id="apply-filters">Apply Filters</button>
+        </div>
+        <div class="vehicle-list" id="vehicle-list"></div>
+    </div>
+
+    <div id="booking-modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeBookingModal()">×</button>
+            <h2>Book Your Vehicle</h2>
+            <div id="booking-details"></div>
+            <label for="pickup-date">Pickup Date</label>
+            <input type="date" id="pickup-date">
+            <label for="pickup-time">Pickup Time</label>
+            <input type="time" id="pickup-time">
+            <label for="dropoff-date">Dropoff Date</label>
+            <input type="date" id="dropoff-date">
+            <button onclick="confirmBooking()">Confirm Booking</button>
+        </div>
+    </div>
+
+    <script>
+        // Sample vehicle data with next available time
+        const vehicles = [
+            {
+                id: 1,
+                name: "Maruti Swift",
+                type: "Car",
+                transmission: "Manual",
+                fuel: "Petrol",
+                seats: 5,
+                price: 1200,
+                image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/123591/swift-exterior-right-front-three-quarter-9.jpeg",
+                availableFrom: "2025-06-03T12:00:00" // Next available time
+            },
+            {
+                id: 2,
+                name: "Hyundai Verna",
+                type: "Car",
+                transmission: "Automatic",
+                fuel: "Petrol",
+                seats: 5,
+                price: 1800,
+                image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/141847/hyundai-verna-exterior-right-front-three-quarter-4.jpeg",
+                availableFrom: "2025-06-03T09:00:00"
+            },
+            {
+                id: 3,
+                name: "Tata Nexon",
+                type: "Car",
+                transmission: "Manual",
+                fuel: "Diesel",
+                seats: 5,
+                price: 2000,
+                image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/141927/nexon-right-front-three-quarter2.jpeg",
+                availableFrom: "2025-06-02T18:00:00"
+            },
+            {
+                id: 4,
+                name: "Royal Enfield Classic 350",
+                type: "Bike",
+                transmission: "Manual",
+                fuel: "Petrol",
+                seats: 2,
+                price: 800,
+                image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/40433/royal-enfield-classic-350-right-front-three-quarter-74.jpeg",
+                availableFrom: "2025-06-02T14:00:00"
+            },
+            {
+                id: 5,
+                name: "TVS Jupiter",
+                type: "Bike",
+                transmission: "Automatic",
+                fuel: "Petrol",
+                seats: 2,
+                price: 600,
+                image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/40433/tvs-jupiter-right-front-three-quarter-74.jpeg",
+                availableFrom: "2025-06-03T10:00:00"
+            }
+        ];
+
+        let selectedVehicle = null;
+
+        // Format datetime for display
+        function formatDateTime(isoDate) {
+            const date = new Date(isoDate);
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        // Render vehicles
+        function renderVehicles(filteredVehicles = vehicles) {
+            const vehicleList = document.getElementById('vehicle-list');
+            vehicleList.innerHTML = '';
+            filteredVehicles.forEach(vehicle => {
+                const vehicleCard = document.createElement('div');
+                vehicleCard.className = 'vehicle-card';
+                const availableFrom = new Date(vehicle.availableFrom);
+                const now = new Date();
+                const isAvailableNow = availableFrom <= now;
+                vehicleCard.innerHTML = `
+    <img src="${vehicle.image}" alt="${vehicle.name}">
+    <h3>${vehicle.name}</h3>
+    <p>Type: ${vehicle.type}</p>
+    <p>Transmission: ${vehicle.transmission}</p>
+    <p>Fuel: ${vehicle.fuel}</p>
+    <p>Seats: ${vehicle.seats}</p>
+    <p class="price">₹${vehicle.price}/day</p>
+    <p class="available">
+    ${isAvailableNow ? 'Available now!' : 'Next available: ' + formatDateTime(vehicle.availableFrom)}
+    </p>
+    <button onclick="openBookingModal(${vehicle.id})">Book Now</button>
+    `;
+                vehicleList.appendChild(vehicleCard);
+            });
+        }
+
+        // Filter vehicles
+        function filterVehicles() {
+            const type = document.getElementById('vehicle-type').value;
+            const transmission = document.getElementById('transmission').value;
+            const fuel = document.getElementById('fuel-type').value;
+
+            const filtered = vehicles.filter(vehicle => {
+                return (!type || vehicle.type === type) &&
+                    (!transmission || vehicle.transmission === transmission) &&
+                    (!fuel || vehicle.fuel === fuel);
+            });
+            renderVehicles(filtered);
+        }
+
+        // Booking modal
+        function openBookingModal(vehicleId) {
+            selectedVehicle = vehicles.find(vehicle => vehicle.id === vehicleId);
+            document.getElementById('booking-details').innerHTML = `
+    <p><strong>Vehicle:</strong> ${selectedVehicle.name}</p>
+    <p><strong>Type:</strong> ${selectedVehicle.type}</p>
+    <p><strong>Price:</strong> ₹${selectedVehicle.price}/day</p>
+    <p><strong>Next available:</strong> ${formatDateTime(selectedVehicle.availableFrom)}</p>
+    `;
+            document.getElementById('booking-modal').style.display = 'flex';
+        }
+
+        function closeBookingModal() {
+            document.getElementById('booking-modal').style.display = 'none';
+        }
+
+        function confirmBooking() {
+            const pickupDate = document.getElementById('pickup-date').value;
+            const pickupTime = document.getElementById('pickup-time').value;
+            const dropoffDate = document.getElementById('dropoff-date').value;
+            if (!pickupDate || !pickupTime || !dropoffDate) {
+                alert('Please select pickup date, time, and dropoff date.');
+                return;
+            }
+            alert(`Booking confirmed for ${selectedVehicle.name} from ${pickupDate} ${pickupTime} to ${dropoffDate}.`);
+            closeBookingModal();
+        }
+
+
+        // Event listeners
+        document.getElementById('apply-filters').addEventListener('click', filterVehicles);
+
+        // Initial render
+        renderVehicles();
+    </script>
+</body>
+
+</html>
