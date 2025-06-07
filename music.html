@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 20px;
+        }
+        h2 {
+            color: #2c3e50;
+        }
+        input, textarea, button {
+            padding: 10px;
+            margin: 5px 0;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .music-box, .ringtone-box {
+            background-color: #fff;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 10px;
+            display: inline-block;
+            width: 250px;
+            vertical-align: top;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .music-container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <h2>Upload Music</h2>
+    <input type="text" id="songName" placeholder="Song Name">
+    <textarea id="description" placeholder="Description"></textarea>
+    <input type="text" id="keywords" placeholder="Keywords">
+    <input type="file" id="mp3Upload" accept="audio/mpeg">
+    <button onclick="uploadSong()">Upload</button>
+
+    <h2>Uploaded Songs</h2>
+    <div class="music-container" id="musicContainer"></div>
+
+    <script>
+        let songs = [];
+
+        function uploadSong() {
+            const name = document.getElementById('songName').value;
+            const desc = document.getElementById('description').value;
+            const keywords = document.getElementById('keywords').value;
+            const file = document.getElementById('mp3Upload').files[0];
+
+            if (name && file) {
+                const songURL = URL.createObjectURL(file);
+                songs.push({ name, desc, keywords, file, songURL });
+                displaySongs();
+
+                // Clear input fields
+                document.getElementById('songName').value = '';
+                document.getElementById('description').value = '';
+                document.getElementById('keywords').value = '';
+                document.getElementById('mp3Upload').value = '';
+
+                // Auto-play the last uploaded song
+                setTimeout(() => {
+                    const audioEls = document.querySelectorAll('.music-box audio');
+                    if (audioEls.length > 0) {
+                        audioEls[audioEls.length - 1].play();
+                    }
+                }, 100); // Small timeout to ensure DOM update
+            } else {
+                alert("Please fill in the song name and upload a file.");
+            }
+        }
+
+        function displaySongs() {
+            const container = document.getElementById('musicContainer');
+            container.innerHTML = '';
+            songs.forEach((song, index) => {
+                const box = document.createElement('div');
+                box.className = 'music-box';
+                box.innerHTML = `
+                    <h3>${song.name}</h3>
+                    <p>${song.desc}</p>
+                    <p><strong>Keywords:</strong> ${song.keywords}</p>
+                    <audio id="audio-${index}" controls>
+                        <source src="${song.songURL}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio><br>
+                    <button onclick="generateRingtone(${index})">Generate Ringtone</button>
+                    <div id="ringtone-box-${index}"></div>
+                `;
+                container.appendChild(box);
+            });
+        }
+
+        async function generateRingtone(index) {
+            const start = parseFloat(prompt("Enter start time in seconds:"));
+            const duration = parseFloat(prompt("Enter duration in seconds:"));
+            if (isNaN(start) || isNaN(duration)) {
+                alert("Invalid input");
+                return;
+            }
+
+            const song = songs[index];
+            const arrayBuffer = await song.file.arrayBuffer();
+
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+            const startSample = Math.floor(start * audioBuffer.sampleRate);
+            const endSample = Math.min(audioBuffer.length, Math.floor((start + duration) * audioBuffer.sampleRate));
+            const length = endSample - startSample;
+
+            const trimmedBuffer = audioContext.createBuffer(
+                audioBuffer.numberOfChannels,
+                length,
+                audioBuffer.sampleRate
+            );
+
+            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                trimmedBuffer.copyToChannel(
+                    audioBuffer.getChannelData(channel).slice(startSample, endSample),
+                    channel
+                );
+            }
+
+            const wavBlob = bufferToWav(trimmedBuffer);
+            const ringtoneURL = URL.createObjectURL(wavBlob);
+
+            const ringtoneBox = document.getElementById(`ringtone-box-${index}`);
+            ringtoneBox.innerHTML = `
+                <div class="ringtone-box">
+                    <p>Ringtone (starts at ${start}s for ${duration}s)</p>
+                    <audio controls src="${ringtoneURL}"></audio>
+                    <a download="${song.name}-ringtone.wav" href="${ringtoneURL}">
+                        <button>Download Ringtone</button>
+                    </a>
+                </div>
+            `;
+        }
+
+        function bufferToWav(buffer) {
+            const numOfChan = buffer.numberOfChannels,
+                length = buffer.length * numOfChan * 2 + 44,
+                bufferArray = new ArrayBuffer(length),
+                view = new DataView(bufferArray),
+                channels = [],
+                sampleRate = buffer.sampleRate;
+
+            let offset = 0;
+
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            writeString(view, offset, 'RIFF'); offset += 4;
+            view.setUint32(offset, length - 8, true); offset += 4;
+            writeString(view, offset, 'WAVE'); offset += 4;
+            writeString(view, offset, 'fmt '); offset += 4;
+            view.setUint32(offset, 16, true); offset += 4;
+            view.setUint16(offset, 1, true); offset += 2;
+            view.setUint16(offset, numOfChan, true); offset += 2;
+            view.setUint32(offset, sampleRate, true); offset += 4;
+            view.setUint32(offset, sampleRate * 2 * numOfChan, true); offset += 4;
+            view.setUint16(offset, numOfChan * 2, true); offset += 2;
+            view.setUint16(offset, 16, true); offset += 2;
+            writeString(view, offset, 'data'); offset += 4;
+            view.setUint32(offset, length - offset - 4, true); offset += 4;
+
+            for (let i = 0; i < numOfChan; i++) channels.push(buffer.getChannelData(i));
+
+            for (let i = 0; i < buffer.length; i++) {
+                for (let chan = 0; chan < numOfChan; chan++) {
+                    const sample = Math.max(-1, Math.min(1, channels[chan][i]));
+                    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                    offset += 2;
+                }
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+    </script>
+</body>
+</html>
